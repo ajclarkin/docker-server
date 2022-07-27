@@ -1,17 +1,10 @@
-## Create a Network
-All containers need a network to communicate on. If left unchecked then nginx proxy manager will create one. However here we get ahead of the curve and create one of our own.
-We can then add this to the config of later containers.
-
-`sudo docker network create dockernet` but note that for dockernet we could use any network name we want.
-
-
 ## Install Nginx Proxy Manager (NPM)
 [Website](https://nginxproxymanager.com/)
 
 Note that this is different to node package manager (npm).
 
 To use this we're going to use a docker-compose file which has the configuration settings in it.
-On this occasion we're going to configure it to use _dockernet_ as the network and the files will be in ~/containers/nginx-proxy-manager/
+This will also create a network which we will then use for all the later containers to join as well. The configuration and data files will be in ~/containers/nginx-proxy-manager/
 We'll stick to using the builtin sqlite option for storage.
 
 
@@ -35,13 +28,13 @@ services:
       - /home/andrew/containers/nginx-progy-manager/data:/data
       - /home/andrew/containers/nginx-progy-manager/letsencrypt:/etc/letsencrypt
       
-  networks:
-    default:
-      external:
-        name: dockernet
-      
 ```
 
 This can be uploaded to Portainer and run as a stack, or run from the command line in the directory storing it.
 `sudo docker-compose up'
 
+
+### Configuration - Once Container is Running
+A default user will be set up as admin@example.com with password changeme. The first time we log in these have to be changed.
+
+To log in we have to use our SSH tunnel at the moment and connect to localhost:81
