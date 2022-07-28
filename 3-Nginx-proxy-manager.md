@@ -39,3 +39,14 @@ A default user will be set up as admin@example.com with password changeme. The f
 
 To log in we have to use our SSH tunnel at the moment and connect to localhost:81 - this route needs to be setup in the tunnel. Ideally we would be able to connect on server-addr:81 but the GCP firewall blocks this.
 
+
+#### Internet Access to NPM
+We'll point a subdomain to NPM. This requires there to be an A record in DNS settings for the subdomain, or a wildcard. Here let's use a wildcard: * -> server_ip_address
+
+Create a new proxy host like this:
+- Domain name: npm.mydomain.com
+- Scheme: http
+- Forward hostname / IP: nginx-proxy-manager_app_1 *- we have to use the name of the container instead of the IP address*
+- Forward port: 81 (the admin port for npm)
+- Might as well block common exploits while you're at it
+
