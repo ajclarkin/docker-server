@@ -37,4 +37,5 @@ This can be uploaded to Portainer and run as a stack, or run from the command li
 ### Configuration - Once Container is Running
 A default user will be set up as admin@example.com with password changeme. The first time we log in these have to be changed.
 
-To log in we have to use our SSH tunnel at the moment and connect to localhost:81
+To log in we have to use our SSH tunnel at the moment and connect to localhost:81 - this route needs to be setup in the tunnel. Ideally we would be able to connect on server-addr:81 but the GCP firewall blocks this.
+
