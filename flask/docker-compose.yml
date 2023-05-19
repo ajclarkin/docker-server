@@ -1,0 +1,16 @@
+version: "3"
+services:
+  web:
+    build: .
+    container_name: gunicorn
+    ports:
+      - "8010:80"
+    volumes:
+      - ./flask:/flask
+    networks:
+      - nginx-proxy-manager_default
+
+networks:
+  nginx-proxy-manager_default:
+    external: true
+    name: nginx-proxy-manager_default
