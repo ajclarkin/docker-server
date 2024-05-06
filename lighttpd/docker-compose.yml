@@ -1,0 +1,18 @@
+version: "3"
+services:
+  lighttpd:
+    image: sebp/lighttpd
+    container_name: lighttpd-alpine
+    volumes:
+      - /home/andrew/containers/lighttpd/html:/var/www/html
+      - /home/andrew/containers/lighttpd/lighttpd:/etc/lighttpd
+    expose:
+      - 80/tcp
+    restart: unless-stopped
+    networks:
+      - nginx-proxy-manager_default
+
+networks:
+  nginx-proxy-manager_default:
+    external: true
+    name: nginx-proxy-manager_default
