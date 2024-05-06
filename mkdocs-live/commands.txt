@@ -1,0 +1,11 @@
+Use these for the common actions required.
+
+To create a new site, navigate to the directory where you want to create it then:
+docker run --rm -it -v ${PWD}:/docs squidfunk/mkdocs-material new .
+
+
+To preview as you write:
+docker compose up -d
+
+To build the site:
+docker run --rm -it -v ${PWD}:/docs squidfunk/mkdocs-material build
