@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  pdfding:
+    container_name: pdfding
+    image: mrmn/pdfding:latest
+    volumes:
+      - /home/ubuntu/containers/pdfding/sqlite_data:/home/nonroot/pdfding/db
+      - /home/ubuntu/containers/pdfding/media:/home/nonroot/pdfding/media
+    environment:
+      - DEFAULT_THEME=${DEFAULT_THEME:-dark}
+      - DEFAULT_THEME_COLOR=${DEFAULT_THEME_COLOR:-blue}
+      # use a long random secret
+      - SECRET_KEY=my-super-long-secret-random-string-goes-here
+      # the domain where you want to access PdfDing, e.g. pdfding.com
+      # here ive chosen to use pdf as the subdomain which I will configure using reverse proxy manager
+      - HOST_NAME=pdf.mydomain.co.uk
+      # In production set the following values to True
+      - CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE:-FALSE}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-FALSE}
+      - ALLOWED_HOSTS=pdf.mydomain.co.uk,pdfding
+      #- ALLOWED_HOSTS=localhost,127.0.0.1,pdfding,localhost:8020
+      - DISABLE_USER_SIGNUP=TRUE
+    ports:
+      - "8020:8000"
+    networks:
+      - nginx-proxy-manager_default
+
+networks:
+  nginx-proxy-manager_default:
+    external: true
+    name: nginx-proxy-manager_default
