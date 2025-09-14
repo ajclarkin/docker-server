@@ -1,0 +1,48 @@
+version: "3"
+services:
+  nextcloud:
+    image: lscr.io/linuxserver/nextcloud:latest
+    container_name: nextcloud
+    depends_on:
+      - nextclouddb
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    volumes:
+      - /home/ubuntu/containers/nextcloud/config:/config
+      - /home/ubuntu/containers/nextcloud/data:/data
+    expose:
+      - 443/tcp
+    restart: unless-stopped
+    networks:
+      - nginx-proxy-manager_default
+
+
+  nextclouddb:
+    image: mariadb:11.4
+    container_name: nextcloud-db
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    networks:
+      - nginx-proxy-manager_default
+    volumes:
+      - /home/ubuntu/containers/nextcloud/nextclouddb:/var/lib/mysql
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+
+networks:
+  nginx-proxy-manager_default:
+    external: true
+    name: nginx-proxy-manager_default
