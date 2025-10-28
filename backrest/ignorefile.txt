@@ -1,0 +1,7 @@
+data/backrest/.resticignore
+data/backrest/foo
+data/backrest/bar/
+data/opencloud/.resticignore
+data/opencloud/data
+data/opencloud/bar/
+data/opencloud/help.txt
