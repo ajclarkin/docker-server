@@ -10,5 +10,5 @@ for SERVICE in $(ls "$DATA_ROOT"); do
     if [ -x "$DATA_DIR/prepare-backup.sh" ]; then
 	    (cd "$DATA_DIR" && ./prepare-backup.sh)
     fi
-done
+#done
  

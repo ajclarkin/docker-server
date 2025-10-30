@@ -1,57 +1,124 @@
-# Backrest
+# Backrest (Restic)
 
-Restic is a nice way of doing sequential backup with deduplication and encryption. Backrest is a web gui for it.
+This solution uses [Backrest](https://github.com/hirosiit/backrest) as a web interface and orchestrator for [Restic](https://restic.net/) backups. It supports encrypted, deduplicated backups of Docker volumes and host directories, with custom scripts automating setup, notifications, and host integration.
 
-I have written a few scripts to simplify setup and then ongoing actions.
+## Core Features
+
+- Encrypted, incremental backups
+- Flexible exclusion via ignore files
+- Automated pre-backup actions per service
+- Secure remote backups over SFTP with helper scripts
+- Custom hooks for network control and status notifications
+
+***
+
+## Installation \& Setup
+
+1. **Clone Repo and Place Files**
+Put your `docker-compose.yml`, `.env`, and this README in your chosen project directory.
+2. **Mount Data and SSH Config**
+    - Bind mount all directories you want backed up in the compose file. They will appear in backrest under /userdata
+    - For remote SFTP backups, mount your host SSH config and keys into the Backrest container. See guide below to set this up (`configure-ssh.sh`)
+3. **Initialize Host Integration**
+    - Run `create-backrest-pipe.sh` on the host.
+    - This script creates the FIFO pipe (`backrest-pipe`) and starts the monitoring script (ensure it's persistent with systemd or crontab).
+
+***
+
+## Adding/Configuring Containers
+
+- Use the `new-container` script to scaffold new service templates.
+  - This will create containers/new-service with compose.yaml and .env, and data/new-service with .resticignore and prepare-backup.sh
+- Mount their data directories into Backrest using Docker Compose bind mounts, or preferably just mount containers/ and data/ and ensure the .resticignore files exclude appropriately.
+
+***
+
+## Exclusions: Ignore File Management
+
+Restic allows file and pattern exclusions using an ignore file similar to `.gitignore`.
+
+**How to use:**
+
+1. **Create a `.resticignore` file** in each data/service directory, listing files or patterns to exclude.
+2. **Run `build-ignore-file.sh`:** - this is run automatically at the beginning of each backup
+    - Scans all `.resticignore` files.
+    - Prepends service folder names to paths for clarity/specificity.
+    - Merges everything into a single ignore file for your backup job.
+3. **Reference the ignore file** in Backrest’s backup flags:
+
+```
+--exclude-file=/path/to/unified_ignorefile.txt
+```
 
 
-## Installation
+*No special mount is needed for the ignore file—it should reside in the backup path.*
 
-Just use the compose file. You have to mount the directories to be backed up and if going to save a local copy of the backup then you need a bind mount for that too.
+***
+
+## Pre-Backup Actions
+
+Some services need setup before backup (e.g., DB dump, service pause).
+
+**How to use:**
+
+1. **Place a `prepare-backup.sh` script** in any service directory needing pre-backup steps.
+2. **Let Hooks Manage Execution:**
+    - Backrest’s pre-backup hook runs the main `pre-backup-actions.sh` script.
+    - This scans each mounted directory and runs any `prepare-backup.sh` script it finds.
+*For databases, prefer text dumps for backup (helps deduplication and clean restores).*
+
+***
+
+## SSH Setup for SFTP Remote Backups
+
+To back up to a remote SFTP server:
+
+1. **Use the provided helper script:**
+    - Creates a new SSH key pair.
+    - Adds the public key to your backup destination.
+    - Copies your SSH config \& keys to a local folder for mounting into the Backrest container.
+2. **Mount your SSH config and keys:**
+    - Add a bind mount to your `docker-compose.yml` so the container has access.
+
+*Skip this step and mount if you are not using SFTP for remote storage.*
+
+***
+
+## Hooks \& Host Scripts
+
+Hooks automate networking and notifications at key backup/maintenance lifecycle stages.
+
+**How it works:**
+
+- Backrest writes commands to `/backrest-pipe` (in container)
+- Host script monitors the pipe and runs:
+    - `start-tailscale` → Enables secure networking
+    - `stop-tailscale` → Disables networking
+    - `pre-backups` → Runs pre-backup actions script
+    - Curl notifications → Sends backup status externally to Uptime-Kuma
+
+**Hook summary table:**
 
 
-## Add New Container
+| Condition | Hook Action |
+| :-- | :-- |
+| SNAPSHOT_START | Start Tailscale, run pre-backup actions |
+| SNAPSHOT_END | Notify success, stop Tailscale |
+| ANY_ERROR | Notify failure, stop Tailscale |
+| PRUNE/CHECK/START | Start Tailscale |
+| PRUNE/CHECK/SUCCESS | Stop Tailscale |
 
-Hopefully when creating the new service I'll have used the new-container script, alias dn. It will create template files.
+*Hook errors are ignored (`ON_ERROR_IGNORE`)—ensure command safety.*
 
-1. Add any files or folders from /data/service to .resticignore as required.
-2. Add any actions that need to happen to prepare-backup-sh
-
-The aim is that Backrest will backup everything in ~/containers and ~/data unless told to exclude it by .resticignore
-
-
-## Details of Setup and Helper Scripts
-
-### SSH
-
-I am connecting to a home server using SFTP as a backup destination. I already have that server set up in my ssh configuration. There is a helper script to create a new key and add it to that server, and then to make a local copy of the SSH config for mounting into the container.
-If you don't plan to use SSH / SFTP then you don't need any of this and don't need to mount the ssh folder.
+***
 
 
-## Hooks
+## Quick Tips
 
-Hooks are processes that run as part of the backup or repo in response to an event. I'm using:
- - CONDITION_SNAPSHOT_SUCCESS: when backup is successful to push a status to Uptime Kuma and take tailscale down.
- - CONDITION_ANY_ERROR: to push a failure message to Uptime Kuma.
- - CONDITION_SNAPSHOT_START: to bring up Tailscale and run pre backup actions.
-
-The hooks need to communicate with the host and so they do it like this:
- - A named pipe (FIFO special file) is created on the host and mounted to container.
- - Container writes messages to pipe.
- - A script running on host reads messages and runs commands / scripts in response to specific messages.
-
-There's a specific setup script called *create-backrest-pipe.sh* which does the setup and starts the monitoring script running, including adding it to crontab.
+- Always update `.resticignore` to exclude unwanted files.
+- Ensure pre-backup scripts are executable and tested for each service.
+- Keep monitoring script running (systemd/crontab).
+- For database containers: backup text dumps for optimal deduplication.
+- Secure pipe and SSH keys with strict permissions.
 
 
-
-## Exclusions
-
-Restic allows lots of different ways of excluding files from backup. Here I have settled on a /resticignore file in each data directory. This is not any official ignore file, I've just chosen to call it that as it functions like a gitignore. There is a script called *build-ignore-file.sh* which should be called at the start of the backup. It iterates through all the .resticignore files, prepending data/$servicename to make sure they are specific to that folder, and creating a unified ignore file.
-
-You need to add a flag to the backup:
-`--exclude-file=/path/to/ignorefile` and since it's in the backup path I've not added a specific mount for it.
-
-
-## Pre Backup Actions
-
-Some containers need actions to take place before backup. For example, stopping a service or dumping a database. (A text dump of database will be slower but better for recreating the tables and much better for deduplication.) There's another script called *pre-backup-actions.sh* called by a hook. It looks in every data/service directory for prepare-backup.sh and will run it if it exists.

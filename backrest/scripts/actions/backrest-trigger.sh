@@ -16,7 +16,7 @@ PROJECT_ROOT="$SCRIPT_DIR/../.."
 
 
 while true; do
-  if read line < "${CONTAINER_DIR}/backrest-pipe"; then
+  while read line; do
     if [[ "$line" == "start-tailscale" ]]; then
       sudo tailscale up
     fi
@@ -26,8 +26,9 @@ while true; do
     fi
 
     if [[ "$line" == "pre-backups" ]]; then
+      "${SCRIPT_DIR}/build-ignorefile.sh"
       "${SCRIPT_DIR}/pre-backup-actions.sh"
     fi
-  fi
+  done < "${CONTAINER_DIR}/backrest-pipe"
 done
 
